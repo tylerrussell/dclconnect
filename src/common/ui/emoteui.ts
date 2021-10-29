@@ -56,17 +56,16 @@ const slices = [
 /**
  * @public
  */
-class EmoteUI {
-  menuContainer: DynamicContainerRect
+export class EmoteUI {
+  menuContainer: DynamicContainerRect | undefined
   emote: string | null = null
-  icon: DynamicImage
+  icon: DynamicImage | undefined
   iconTexture: Texture | undefined
   menuTexture: Texture | undefined
   buttons: DynamicImage[] = []
   currentEmote: string = ''
   menuVisible: boolean = false
-  triggerEmote: any
-  PredefinedEmotes: any
+  emotes: Function[] = []
 
   constructor(
     iconTextureUrl: string = defaultIconImageURL,
@@ -77,15 +76,14 @@ class EmoteUI {
   }
 
   public create(
-    triggerEmote: any,
-    PredefinedEmotes: any,
+    emotes: Function[],
     iconTextureURL: string = defaultIconImageURL,
     menuTextureURL: string = defaultMenuImageURL
   ) {
+    this.emotes = emotes
     this.iconTexture = new Texture(iconTextureURL)
     this.menuTexture = new Texture(menuTextureURL)
-    this.triggerEmote = triggerEmote
-    this.PredefinedEmotes = PredefinedEmotes
+
     this.menuContainer = new DynamicContainerRect(new UIContainerRect(canvas))
     this.menuContainer.rect.hAlign = 'right'
     this.menuContainer.rect.vAlign = 'top'
@@ -107,44 +105,50 @@ class EmoteUI {
     this.icon.image.onClick = new OnClick(() => {
       this.menuVisible = !this.menuVisible
       if (this.menuVisible) {
-        this.menuContainer.scaleIn(0.5, DCLConnectEase.easeInOutElastic)
-        this.menuContainer.fadeIn(0.25)
+        if (this.menuContainer) {
+          this.menuContainer.scaleIn(0.5, DCLConnectEase.easeInOutElastic)
+          this.menuContainer.fadeIn(0.25)
+        }
       } else {
-        this.menuContainer.scaleOut(0.5, DCLConnectEase.easeInOutElastic)
-        this.menuContainer.fadeOut(0.25)
+        if (this.menuContainer) {
+          this.menuContainer.scaleOut(0.5, DCLConnectEase.easeInOutElastic)
+          this.menuContainer.fadeOut(0.25)
+        }
       }
     })
 
     slices.forEach(slice => {
-      const part = new DynamicImage(
-        new UIImage(this.menuContainer.rect, this.menuTexture)
-      )
-      part.image.sourceLeft = slice.x * 2
-      part.image.sourceTop = slice.y * 2
-      part.image.sourceWidth = slice.w * 2
-      part.image.sourceHeight = slice.h * 2
-      part.image.positionY = slice.py
-      part.image.positionX = slice.px
-      part.image.width = slice.w
-      part.image.height = slice.h
-      part.image.vAlign = 'top'
-      part.image.hAlign = 'left'
-      part.image.opacity = defaultOpacity
-      if (slice.name.substring(0, 6) !== 'spacer') {
-        part.image.onClick = new OnClick(() => {
-          //reset default opacity on all
-          this.buttons.forEach(button => {
-            button.image.opacity = defaultOpacity
+      if (this.menuContainer && this.menuTexture) {
+        const part = new DynamicImage(
+          new UIImage(this.menuContainer.rect, this.menuTexture)
+        )
+        part.image.sourceLeft = slice.x * 2
+        part.image.sourceTop = slice.y * 2
+        part.image.sourceWidth = slice.w * 2
+        part.image.sourceHeight = slice.h * 2
+        part.image.positionY = slice.py
+        part.image.positionX = slice.px
+        part.image.width = slice.w
+        part.image.height = slice.h
+        part.image.vAlign = 'top'
+        part.image.hAlign = 'left'
+        part.image.opacity = defaultOpacity
+        if (slice.name.substring(0, 6) !== 'spacer') {
+          part.image.onClick = new OnClick(() => {
+            //reset default opacity on all
+            this.buttons.forEach(button => {
+              button.image.opacity = defaultOpacity
+            })
+            if (this.currentEmote !== slice.name) {
+              this.currentEmote = slice.name
+              this.setEmote(this.currentEmote)
+              part.image.opacity = 1
+            } else {
+              this.currentEmote = ''
+            }
           })
-          if (this.currentEmote !== slice.name) {
-            this.currentEmote = slice.name
-            this.setEmote(this.currentEmote)
-            part.image.opacity = 1
-          } else {
-            this.currentEmote = ''
-          }
-        })
-        this.buttons.push(part)
+          this.buttons.push(part)
+        }
       }
     })
   }
@@ -158,7 +162,7 @@ class EmoteUI {
     }
     const emoteInfo = this.getEmoteInfo(_emote)
     if (emoteInfo[0] && emoteInfo[1]) {
-      this.triggerEmote({ predefined: emoteInfo[0] })
+      emoteInfo[0]()
       new Wait(() => {
         if (this.currentEmote === emote) {
           this.setEmote(emote)
@@ -167,47 +171,47 @@ class EmoteUI {
     }
   }
 
-  private getEmoteInfo(emote: any): [any | null, number | null] {
+  private getEmoteInfo(emote: string): [Function | null, number | null] {
     switch (emote) {
       case 'wave':
-        return [this.PredefinedEmotes[0], 3]
+        return [this.emotes[0], 3]
       case 'fistpump':
-        return [this.PredefinedEmotes[1], 3]
+        return [this.emotes[1], 3]
       case 'robot':
-        return [this.PredefinedEmotes[2], 9]
+        return [this.emotes[2], 9]
       case 'raiseHand':
-        return [this.PredefinedEmotes[3], 3]
+        return [this.emotes[3], 3]
       case 'clap':
-        return [this.PredefinedEmotes[4], 5]
+        return [this.emotes[4], 5]
       case 'money':
-        return [this.PredefinedEmotes[5], 5]
+        return [this.emotes[5], 5]
       case 'kiss':
-        return [this.PredefinedEmotes[6], 5]
+        return [this.emotes[6], 5]
       case 'tik':
-        return [this.PredefinedEmotes[7], 10]
+        return [this.emotes[7], 10]
       case 'hammer':
-        return [this.PredefinedEmotes[8], 11]
+        return [this.emotes[8], 11]
       case 'tektonik':
-        return [this.PredefinedEmotes[9], 10]
+        return [this.emotes[9], 10]
       case 'dontsee':
-        return [this.PredefinedEmotes[10], 2]
+        return [this.emotes[10], 2]
       case 'handsair':
-        return [this.PredefinedEmotes[11], 5]
+        return [this.emotes[11], 5]
       case 'shrug':
-        return [this.PredefinedEmotes[12], 2]
+        return [this.emotes[12], 2]
       case 'disco':
-        return [this.PredefinedEmotes[13], 11]
+        return [this.emotes[13], 11]
       case 'dab':
-        return [this.PredefinedEmotes[14], 3]
+        return [this.emotes[14], 3]
       case 'headexplode':
-        return [this.PredefinedEmotes[15], 4]
+        return [this.emotes[15], 4]
       default:
         return [null, null]
     }
   }
 
   private getRandomEmote(): any {
-    return this.PredefinedEmotes[Math.floor(Math.random() * this.PredefinedEmotes.length)]
+    return this.emotes[Math.floor(Math.random() * this.emotes.length)]
   }
 }
 
